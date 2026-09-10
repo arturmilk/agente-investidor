@@ -1,0 +1,18 @@
+# Segredos — NUNCA versionar
+agente-bolsa.token
+
+# Cache de dados baixados (CVM, brapi)
+.cache/
+cvm_cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Saídas de análise (regeneráveis)
+*.json
+
+# Ambientes virtuais
+venv/
+.venv/
