@@ -1,7 +1,7 @@
 """Orquestrador do Agente Bolsa.
 
 Uso:
-    python analyze.py PETR4 VALE3 ITUB4 [--horizonte 6m] [--out resultados.json] [--noticias]
+    python analyze.py PETR4 VALE3 ITUB4 [--horizonte 6m] [--out resultados.json]
 
 Coleta dados, calcula métricas, score determinístico e red flags,
 e grava um JSON + imprime um resumo em markdown.
@@ -18,7 +18,7 @@ from analysis import build_metrics, deterministic_score, red_flags
 from config import DEFAULT_TICKERS
 
 
-def analyze_symbols(symbols, with_news=False):
+def analyze_symbols(symbols):
     results = []
     errors = []
     for s in symbols:
@@ -31,13 +31,9 @@ def analyze_symbols(symbols, with_news=False):
                 "metricas": m,
                 "score_deterministico": score,
                 "red_flags": flags,
+                # Notícias/eventos dos últimos 3 meses — SEMPRE coletados
+                "noticias": _load_noticias(s, m, raw),
             }
-            if with_news:
-                kws = [s]
-                nome = m.get("nome") or ""
-                if nome:
-                    kws.append(nome.split(" ")[0])
-                entry["noticias"] = _load_news(kws)
             results.append(entry)
             print(f"[ok] {s}: score determinístico {score['total_deterministico']}/70", file=sys.stderr)
         except Exception as e:
@@ -47,12 +43,33 @@ def analyze_symbols(symbols, with_news=False):
     return results, errors
 
 
-def _load_news(keywords):
+def _load_noticias(s, m, raw):
+    """Notícias/eventos dos últimos 3 meses: CVM (fato relevante etc.) + RSS (imprensa)."""
+    out = {"cvm_eventos": [], "rss": []}
+    # CVM — fatos relevantes, comunicados, resultados, proventos (fonte primária)
+    cd_cvm = (raw.get("cvm") or {}).get("cd_cvm")
+    if cd_cvm:
+        try:
+            import cvm
+            out["cvm_eventos"] = cvm.get_eventos(cd_cvm, meses=3)
+        except Exception:
+            pass
+    # RSS — imprensa/sentimento: casa por ticker e nome comercial (marca, mais específico)
+    kws = [s]
+    if cd_cvm:
+        try:
+            import cvm
+            comercial = cvm.get_nome_comercial(cd_cvm)
+            if comercial:
+                kws.append(comercial)
+        except Exception:
+            pass
     try:
         import news
-        return news.search_news(keywords)
+        out["rss"] = news.search_news(kws, meses=3)
     except Exception:
-        return []
+        pass
+    return out
 
 
 def _load_macro():
@@ -122,6 +139,15 @@ def markdown_summary(results):
             lines.append("- **Red flags**: " + "; ".join(f"{f['flag']} [{f['severidade']}]" for f in r["red_flags"]))
         else:
             lines.append("- **Red flags**: nenhuma detectada")
+        noticias = r.get("noticias") or {}
+        eventos = noticias.get("cvm_eventos") or []
+        rss = noticias.get("rss") or []
+        if eventos or rss:
+            lines.append(f"- **Eventos/notícias (últimos 3 meses)**: {len(eventos)} eventos CVM, {len(rss)} notícias de imprensa")
+            for ev in eventos[:4]:
+                lines.append(f"  - `{ev['data']}` [{ev['categoria']}] {ev['assunto'][:90]}")
+            for n in rss[:3]:
+                lines.append(f"  - `{n['data']}` ({n['fonte']}) {n['titulo'][:90]}")
         lines.append("")
     return "\n".join(lines)
 
@@ -143,12 +169,11 @@ def main():
     ap.add_argument("tickers", nargs="*", help="Tickers (ex.: PETR4 VALE3). Vazio = universo padrão.")
     ap.add_argument("--horizonte", default="6m", help="Prazo de análise (ex.: 3m, 6m, 12m)")
     ap.add_argument("--out", default=None, help="Caminho do JSON de saída")
-    ap.add_argument("--noticias", action="store_true", help="Buscar notícias relacionadas")
     ap.add_argument("--no-summary", action="store_true", help="Não imprimir resumo markdown")
     args = ap.parse_args()
 
     symbols = args.tickers or DEFAULT_TICKERS
-    results, errors = analyze_symbols(symbols, with_news=args.noticias)
+    results, errors = analyze_symbols(symbols)
 
     payload = {
         "horizonte": args.horizonte,

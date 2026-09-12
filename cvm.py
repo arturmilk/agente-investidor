@@ -49,15 +49,25 @@ OVERRIDES = {
 
 YEARS = [2021, 2022, 2023, 2024, 2025]
 
+# Eventos relevantes (IPE — Periódicos e Eventuais) para catalisadores
+IPE_BASE = f"{BASE}/DOC/IPE/DADOS"
+EVENT_CATEGORIES = [
+    "Fato Relevante",
+    "Comunicado ao Mercado",
+    "Dados Econômico-Financeiros",
+    "Relatório Proventos",
+]
+
 
 def _log(msg):
     print(f"[cvm] {msg}", file=sys.stderr)
 
 
-def _download(url, cache_name):
+def _download(url, cache_name, ttl=None):
     path = os.path.join(CACHE, cache_name)
     if os.path.exists(path) and os.path.getsize(path) > 0:
-        return path
+        if ttl is None or (time.time() - os.path.getmtime(path)) < ttl:
+            return path
     _log(f"baixando {cache_name} ...")
     tmp = path + ".part"
     urllib.request.urlretrieve(url, tmp)
@@ -76,10 +86,16 @@ def normalize(s):
     return s
 
 
+_cadastro_cache = None
+
+
 def get_cadastro():
-    path = _download(CADASTRO_URL, "cad_cia_aberta.csv")
-    with open(path, encoding="latin-1") as f:
-        return list(csv.DictReader(f, delimiter=";"))
+    global _cadastro_cache
+    if _cadastro_cache is None:
+        path = _download(CADASTRO_URL, "cad_cia_aberta.csv")
+        with open(path, encoding="latin-1") as f:
+            _cadastro_cache = list(csv.DictReader(f, delimiter=";"))
+    return _cadastro_cache
 
 
 def find_cd_cvm(company_name, ticker):
@@ -111,6 +127,18 @@ def find_cd_cvm(company_name, ticker):
         return int(cands[0]["CD_CVM"]), "prefixo"
 
     return None, "nao_encontrado"
+
+
+def get_nome_comercial(cd_cvm):
+    """Nome comercial (marca) de uma companhia — ideal para casar com manchetes.
+
+    Ex.: Petrobras → "PETROBRAS" (não "Petróleo Brasileiro S.A.")."""
+    cod = str(int(cd_cvm))
+    cod_padded = f"{int(cd_cvm):06d}"
+    for r in get_cadastro():
+        if (r.get("CD_CVM") or "").strip() in (cod, cod_padded):
+            return ((r.get("DENOM_COMERC") or "").strip() or (r.get("DENOM_SOCIAL") or "").strip())
+    return ""
 
 
 def _escala_factor(escala):
@@ -223,6 +251,61 @@ def get_fundamentals(ticker, company_name):
             series.setdefault(conta, {})[ano] = valor
 
     return {"cd_cvm": cd_cvm, "match": motivo, "series": series}
+
+
+def get_eventos(cd_cvm, meses=3):
+    """Eventos relevantes dos últimos N meses de uma companhia (por CD_CVM).
+
+    Categorias: Fato Relevante, Comunicado ao Mercado, Dados Econômico-Financeiros
+    (resultados) e Relatório Proventos (dividendos/JCP). Fonte: IPE da CVM.
+
+    Retorna lista de {data, categoria, tipo, assunto, link}, mais recente primeiro.
+    """
+    from datetime import datetime, timedelta
+    hoje = datetime.now()
+    corte = hoje - timedelta(days=meses * 30)
+    anos = {hoje.year}
+    if corte.year != hoje.year:
+        anos.add(corte.year)
+
+    cod = str(int(cd_cvm))
+    cod_padded = f"{int(cd_cvm):06d}"
+    eventos = []
+
+    for ano in anos:
+        url = f"{IPE_BASE}/ipe_cia_aberta_{ano}.zip"
+        try:
+            path = _download(url, f"ipe_{ano}.zip", ttl=6 * 3600)
+            z = zipfile.ZipFile(path)
+            fname = f"ipe_cia_aberta_{ano}.csv"
+            rows = csv.DictReader(io.StringIO(z.read(fname).decode("latin-1")), delimiter=";")
+            for r in rows:
+                cv = (r.get("Codigo_CVM") or "").strip()
+                if cv not in (cod, cod_padded):
+                    continue
+                categoria = (r.get("Categoria") or "").strip()
+                if categoria not in EVENT_CATEGORIES:
+                    continue
+                data = (r.get("Data_Referencia") or "").strip()
+                try:
+                    dt = datetime.strptime(data, "%Y-%m-%d")
+                except ValueError:
+                    continue
+                if dt < corte:
+                    continue
+                assunto = (r.get("Assunto") or "").strip()
+                eventos.append({
+                    "data": data,
+                    "categoria": categoria,
+                    "tipo": (r.get("Tipo") or "").strip(),
+                    "assunto": (assunto or categoria)[:300],
+                    "link": (r.get("Link_Download") or "").strip(),
+                })
+        except Exception as e:
+            _log(f"IPE {ano}: {e}")
+
+    eventos.sort(key=lambda x: x["data"], reverse=True)
+    return eventos
 
 
 if __name__ == "__main__":

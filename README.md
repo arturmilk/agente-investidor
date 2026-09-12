@@ -40,8 +40,8 @@ export BRAPI_TOKEN="sua-chave"        # ou: salve a chave em agente-bolsa.token
 cd C:\Users\usuario\agente-bolsa
 python analyze.py PETR4 VALE3 WEGE3 --out resultados.json
 
-# 3. Com notícias relacionadas
-python analyze.py PETR4 VALE3 --noticias
+# 3. Notícias/eventos dos últimos 3 meses são coletados automaticamente
+#    (CVM: fatos relevantes/comunicados/resultados/proventos + RSS de imprensa)
 
 # 4. Universo padrão (config.py)
 python analyze.py

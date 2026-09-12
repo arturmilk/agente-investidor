@@ -27,8 +27,8 @@ nota rastreável até os dados.
 2. **Ler o JSON** de saída: `macro` (Selic/IPCA/câmbio/IBOV), `metricas`, `score_deterministico`
    (0–70) e `red_flags` por ativo.
 3. **Camada qualitativa** (LLM): Qualidade (0–20) e Risco (0–10) conforme §3 e §4.
-4. **Notícias/catalisadores**: `--noticias` no comando acima, ou
-   `python -c "import news; print(news.search_news([...]))"`. Ler contexto macro quando relevante.
+4. **Notícias/catalisadores** (automático — últimos 3 meses): eventos da CVM (fato relevante,
+   comunicado, resultado, proventos) + notícias de imprensa (RSS). Já vêm no JSON como `noticias`.
 5. **Montar o relatório final** no formato do §8.
 
 **O score determinístico NÃO substitui a análise.** É um filtro para encontrar candidatos
@@ -124,7 +124,9 @@ lucro divergindo. Contextualize por setor (ex.: payout > 100% é normal em elét
   corrige as imprecisões do Yahoo para bancos, Petrobras e ADRs. O yfinance só é usado como
   fallback (ações em circulação, beta, preço-alvo, e quando a CVM não cobre).
 - **Cotação/perfil/lista de tickers**: brapi.dev v2 (grátis, exige token).
-- **Notícias (sentimento/catalisadores)**: InfoMoney, Valor, Brazil Journal, Money Times (RSS).
+- **Eventos/notícias (automático, últimos 3 meses)**: CVM IPE — fato relevante, comunicado ao
+  mercado, dados econômico-financeiros (resultados) e relatório de proventos (dividendos/JCP);
+  + RSS de InfoMoney, Valor, Brazil Journal e Money Times (sentimento de imprensa).
 - **Macro**: Selic e IPCA (API do Banco Central SGS), câmbio (BCB), IBOV (brapi `^BVSP`).
 
 ---
