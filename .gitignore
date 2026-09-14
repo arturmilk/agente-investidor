@@ -1,7 +1,8 @@
 # Segredos — NUNCA versionar
 agente-bolsa.token
+.env
 
-# Cache de dados baixados (CVM, brapi)
+# Cache de dados baixados (a v1 guardava dentro da pasta do projeto)
 .cache/
 cvm_cache/
 
@@ -12,6 +13,10 @@ __pycache__/
 
 # Saídas de análise (regeneráveis)
 *.json
+
+# Pacotes gerados
+dist/
+*.zip
 
 # Ambientes virtuais
 venv/

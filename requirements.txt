@@ -1,0 +1,4 @@
+# O Agente Bolsa usa apenas a biblioteca padrão do Python (3.9+). Nada é obrigatório.
+#
+# Opcional — consenso de preço-alvo dos analistas (Yahoo):
+# yfinance>=0.2.40
