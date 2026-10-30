@@ -636,6 +636,7 @@ def nome_comercial(cd) -> str:
 # IPE — fatos relevantes, comunicados, resultados e proventos
 # ---------------------------------------------------------------------------
 def eventos(cd, meses=3) -> list:
+    from seguranca import limpar, link_seguro  # assuntos são escritos pelas companhias: texto de terceiros
     hoje = datetime.now()
     corte = hoje - timedelta(days=meses * 30)
     cod = str(int(cd))
@@ -656,8 +657,8 @@ def eventos(cd, meses=3) -> list:
                     continue
                 if dt < corte:
                     continue
-                out.append({"data": data, "categoria": cat.strip(), "tipo": tipo.strip(),
-                            "assunto": (assunto.strip() or cat.strip())[:300], "link": link.strip()})
+                out.append({"data": data, "categoria": cat.strip(), "tipo": limpar(tipo, 120),
+                            "assunto": limpar(assunto, 300) or cat.strip(), "link": link_seguro(link)})
             z.close()
         except Exception as e:
             log(f"IPE {ano}: {e}")

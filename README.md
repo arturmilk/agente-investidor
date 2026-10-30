@@ -4,7 +4,7 @@ Skill para o [Hermes Agent](https://hermes-agent.nousresearch.com) (e para uso d
 terminal) que responde **"esta ação está barata ou cara — e por quê?"** com dados oficiais
 e varre a bolsa inteira atrás de oportunidades.
 
-> ⚠️ Ferramenta de análise e apoio à decisão com dados públicos. Não é recomendação
+> ⚠ Ferramenta de análise e apoio à decisão com dados públicos. Não é recomendação
 > personalizada de investimento e não substitui um profissional certificado (CVM/Anbima).
 
 ## O que ele faz
@@ -135,6 +135,17 @@ agente-bolsa/
     ├── universe.py           # universo B3 + medianas setoriais
     ├── macro.py · news.py · report.py · net.py · config.py
 ```
+
+## Segurança
+
+- Textos de terceiros (manchetes, assuntos de documentos da CVM, descrições de empresas) são
+  limpos antes de chegar ao LLM — sem caracteres invisíveis, HTML, links ou imagens em markdown —
+  e aparecem entre «» nos relatórios, como dado e não como instrução.
+- Os scripts não executam comandos externos, só acessam fontes fixas (CVM, B3, brapi, Yahoo,
+  Banco Central, Google News/RSS) e validam os tickers recebidos.
+- No Hermes, combine a skill com: lista de usuários autorizados no Telegram/WhatsApp, aprovação
+  de comandos ligada (nunca `--yolo`), `approvals.cron_mode: deny`, `skills.write_approval: true`
+  e uma política de segurança no `SOUL.md`.
 
 ## Limitações
 

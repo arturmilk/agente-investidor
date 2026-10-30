@@ -1,7 +1,13 @@
-"""Relatórios em Markdown: completo (terminal/arquivo) e compacto (Telegram/WhatsApp)."""
+"""Relatórios em Markdown: completo (terminal/arquivo) e compacto (Telegram/WhatsApp).
+
+Textos de terceiros (descrição da empresa, manchetes, assuntos da CVM) aparecem
+entre «» e com o aviso de conteúdo externo — são dados, não instruções.
+"""
 from __future__ import annotations
 
 from datetime import datetime
+
+from seguranca import AVISO as AVISO_EXTERNO
 
 NOMES_METODO = {"graham": "Graham", "bazin": "Bazin", "pl_do_setor": "P/L do setor",
                 "ev_ebit_do_setor": "EV/EBIT do setor", "pvp_do_setor": "P/VP do setor",
@@ -124,9 +130,10 @@ def _ativo_md(a):
          f"- **Dados contábeis:** {d.get('fonte')} (CVM)",
          f"- **Governança:** {gov.get('segmento_listagem') or '—'} · controle {gov.get('controle') or '—'} · "
          f"{gov.get('situacao_emissor') or '—'}", ""]
-    neg = " ".join((a.get("negocio") or "").split())
+    neg = a.get("negocio") or ""
     if neg:
-        L += [f"> {neg[:420]}{'…' if len(neg) > 420 else ''}", ""]
+        L += [f"> _Descrição da empresa (fonte externa; {AVISO_EXTERNO}):_ "
+              f"«{neg[:420]}{'…' if len(neg) > 420 else ''}»", ""]
 
     L += ["### Valuation", "", "| Indicador | Empresa | Mediana do setor | Mediana própria (5a) |",
           "|---|--:|--:|--:|", f"| P/L | {mult(m.get('pl'))} | {mult(med.get('pl'))} | {mult(hm.get('pl'))} |"]
@@ -199,10 +206,17 @@ def _ativo_md(a):
                                  or ["- Nenhuma detectada pelos filtros quantitativos."]) + [""]
     nt = a.get("noticias") or {}
     ev, gn = nt.get("cvm_eventos") or [], (nt.get("google_news") or []) + (nt.get("rss") or [])
+    ind = nt.get("industria") or []
     if ev or gn:
-        L += ["### Fatos relevantes e notícias", ""]
-        L += [f"- `{e['data']}` **{e['categoria']}** — {e['assunto'][:110]}" for e in ev[:6]]
-        L += [f"- `{n['data']}` {n['titulo'][:120]} ({n['fonte']})" for n in gn[:6]]
+        L += ["### Fatos relevantes e notícias", "",
+              f"_Títulos escritos por companhias e pela imprensa — {AVISO_EXTERNO}._", ""]
+        L += [f"- `{e['data']}` **{e['categoria']}** — «{e['assunto'][:110]}»" for e in ev[:6]]
+        L += [f"- `{n['data']}` «{n['titulo'][:120]}» ({n['fonte']})" for n in gn[:6]]
+        L.append("")
+    if ind:
+        L += ["### Indústria/setor (tendências)", "",
+              f"_Manchetes da imprensa sobre o setor — {AVISO_EXTERNO}._", ""]
+        L += [f"- `{n['data']}` «{n['titulo'][:120]}» ({n['fonte']})" for n in ind[:6]]
         L.append("")
     return L
 
@@ -223,9 +237,9 @@ def _analise_compacta(p, ativos):
               f"Preço justo ~{rs(t['preco_justo'])} ({up(t['upside'])})" if t.get("preco_justo")
               else "Preço justo: base insuficiente"]
         for x in sorted(a.get("red_flags") or [], key=lambda x: _SEV.get(x["severidade"], 3))[:2]:
-            L.append(f"⚠️ {x['flag']}")
+            L.append(f"⚠ {x['flag']}")
         ev = ((a.get("noticias") or {}).get("cvm_eventos") or [])[:1]
-        L += [f"📰 {e['data']} {e['categoria']}: {e['assunto'][:80]}" for e in ev]
+        L += [f"📰 {e['data']} {e['categoria']} (texto da companhia): «{e['assunto'][:80]}»" for e in ev]
         L.append("")
     if p.get("erros"):
         L.append("Não analisados: " + "; ".join(p["erros"]))

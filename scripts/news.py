@@ -5,7 +5,7 @@
 - RSS de imprensa (InfoMoney, Valor, Brazil Journal, Money Times) filtrado
   por ticker/nome.
 Os eventos oficiais (fato relevante, resultados, proventos) vêm do IPE da
-CVM (ver cvm.eventos).
+CVM (ver cvm.eventos). Todo texto de terceiros passa por seguranca.limpar.
 """
 from __future__ import annotations
 
@@ -16,10 +16,10 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
 
-from config import NEWS_FEEDS
+from config import INDUSTRIA_GRUPO_KEYWORDS, INDUSTRIA_KEYWORDS, NEWS_FEEDS
 from net import get_text, log
+from seguranca import limpar, link_seguro
 
-_TAG = re.compile(r"<[^>]+>")
 # frases comuns que geram falso positivo com nomes curtos (ex.: "Vale")
 _RUIDO = ("vale a pena", "vale-refeicao", "vale-alimentacao", "vale refeicao", "vale alimentacao", "vale do ")
 _GENERICOS = ("cotacao e indicadores", "dividendos, cotacao", "cotacao hoje", "grafico e historico")
@@ -44,13 +44,13 @@ def _itens(xml_bytes):
         return []
     out = []
     for it in root.iter("item"):
-        titulo = _TAG.sub(" ", it.findtext("title") or "").strip()
+        titulo = limpar(it.findtext("title"), 200)
         if titulo:
             src = it.find("source")
-            out.append({"titulo": titulo, "link": (it.findtext("link") or "").strip(),
-                        "resumo": _TAG.sub(" ", it.findtext("description") or "").replace("&nbsp;", " ").strip()[:300],
+            out.append({"titulo": titulo, "link": link_seguro(it.findtext("link")),
+                        "resumo": limpar(it.findtext("description"), 300),
                         "dt": _data(it.findtext("pubDate") or ""),
-                        "fonte": (src.text or "").strip() if src is not None and src.text else None})
+                        "fonte": limpar(src.text, 60) if src is not None and src.text else None})
     return out
 
 
@@ -116,3 +116,22 @@ def rss(termos, meses=3, max_itens=10) -> list:
 def buscar(ticker, nome=None, dias=90) -> dict:
     termos = [ticker.upper()] + ([nome] if nome else [])
     return {"google_news": google_news(termos, dias=dias), "rss": rss(termos, meses=max(1, dias // 30))}
+
+
+def industria(setor_base, grupo, dias=90, max_itens=10) -> list:
+    """Notícias de TENDÊNCIA da indústria/setor (não da empresa) via Google News.
+
+    Mapeia o setor_base da CVM para palavras-chave do setor e busca manchetes
+    recentes — captura momentum setorial, rotação e ventos a favor/contra.
+    """
+    s = _norm(setor_base)
+    kws = None
+    for frag, words in INDUSTRIA_KEYWORDS:
+        if _norm(frag) in s:
+            kws = words
+            break
+    if not kws:
+        kws = INDUSTRIA_GRUPO_KEYWORDS.get(grupo, [])
+    if not kws:
+        return []
+    return google_news(kws, dias=dias, max_itens=max_itens)

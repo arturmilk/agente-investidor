@@ -30,6 +30,7 @@ import universe
 import valuation
 from config import DEFAULT_TICKERS
 from net import log
+from seguranca import AVISO as AVISO_EXTERNO, limpar, ticker_valido
 
 AVISO = ("Análise de apoio à decisão baseada em dados públicos (CVM, B3, Banco Central). "
          "Não é recomendação personalizada de investimento.")
@@ -50,7 +51,11 @@ def _precos_da_lista():
 
 
 def analisar(ticker, mac, snap=None, lista=None, noticias=True, meses=3) -> dict:
-    t = ticker.strip().upper()
+    t = (ticker or "").strip().upper()
+    if not ticker_valido(t):
+        raise RuntimeError("ticker inválido (formato esperado: PETR4, TAEE11)")
+    if t.endswith("F") and len(t) >= 6:
+        t = t[:-1]  # mercado fracionário → ticker padrão
     q = market.cotacao(t)
     if not q or not q.get("preco"):
         raise RuntimeError("cotação indisponível (ticker existe?)")
@@ -105,8 +110,10 @@ def analisar(ticker, mac, snap=None, lista=None, noticias=True, meses=3) -> dict
         "cnpj": emp["cnpj"],
         "setor": {"cvm": setor, "nome": indicators.setor_nome(setor), "base": indicators.setor_base(setor),
                   "grupo": m["grupo"], "grupo_nome": indicators.GRUPO_NOME.get(m["grupo"]),
-                  "subsetor_b3": (lista.get(t) or {}).get("subsetor"), "industria": perfil.get("industry")},
-        "negocio": (perfil.get("longBusinessSummary") or "")[:1500],
+                  "subsetor_b3": limpar((lista.get(t) or {}).get("subsetor"), 80) or None,
+                  "industria": limpar(perfil.get("industry"), 80) or None},
+        # texto de terceiros (brapi): limpo e marcado como conteúdo externo nos relatórios
+        "negocio": limpar(perfil.get("longBusinessSummary"), 1500),
         "governanca": gov,
         "cotacao": {**q, "market_cap_usado": mcap, "market_cap_info": mcap_info},
         "dados": {**emp["ttm_info"], "resolucao_cvm": motivo, "trimestre": (emp.get("trimestre") or {}).get("ref")},
@@ -122,7 +129,12 @@ def analisar(ticker, mac, snap=None, lista=None, noticias=True, meses=3) -> dict
     }
     if noticias:
         nome_n = _nome_curto(cvm.nome_comercial(cd) or emp["nome"])
-        ent["noticias"] = {"cvm_eventos": cvm.eventos(cd, meses), **news.buscar(t, nome_n, dias=meses * 30)}
+        setor_b = indicators.setor_base(setor)
+        ent["noticias"] = {
+            "cvm_eventos": cvm.eventos(cd, meses),
+            **news.buscar(t, nome_n, dias=meses * 30),
+            "industria": news.industria(setor_b, m["grupo"], dias=meses * 30),
+        }
     return ent
 
 
@@ -157,10 +169,11 @@ def main():
             ativos.append(analisar(t, mac, snap, lista, not args.sem_noticias, args.meses))
             log(f"[ok] {t}")
         except Exception as e:
-            erros.append(f"{t}: {e}")
-            log(f"[erro] {t}: {e}")
+            erros.append(f"{limpar(t, 20)}: {e}")
+            log(f"[erro] {limpar(t, 20)}: {e}")
     payload = {"gerado_em": datetime.now().isoformat(timespec="seconds"), "macro": mac, "ativos": ativos,
-               "erros": erros, "aviso": AVISO}
+               "erros": erros, "aviso": AVISO,
+               "conteudo_externo": {"campos": ["ativos[].negocio", "ativos[].noticias"], "aviso": AVISO_EXTERNO}}
     if args.out:
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2, default=str)

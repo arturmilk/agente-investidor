@@ -21,3 +21,6 @@ dist/
 # Ambientes virtuais
 venv/
 .venv/
+
+# Diretório acidental criado por expansão literal de "~" (lixo)
+~/

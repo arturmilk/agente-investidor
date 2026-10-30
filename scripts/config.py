@@ -65,3 +65,47 @@ NEWS_FEEDS = {
     "Brazil Journal": "https://braziljournal.com/feed/",
     "Money Times": "https://www.moneytimes.com.br/mercados/feed/",
 }
+
+# Palavras-chave de TENDÊNCIA por indústria (casamento por fragmento no setor_base da CVM).
+# Usadas para buscar notícias do setor (não da empresa) via Google News antes da avaliação.
+INDUSTRIA_KEYWORDS = [
+    ("petroleo", ["petróleo", "opep", "pré-sal", "combustíveis", "óleo e gás"]),
+    ("extracao mineral", ["mineração", "minério de ferro", "mineradoras", "metais básicos"]),
+    ("metalurgia", ["siderurgia", "aço", "metalurgia", "usinas"]),
+    ("celulose", ["celulose", "papel", "pulp", "florestas plantadas"]),
+    ("petroquimic", ["petroquímico", "resinas", "indústria química"]),
+    ("agricultura", ["agronegócio", "grãos", "fertilizantes", "agro"]),
+    ("reflorestamento", ["reflorestamento", "madeira", "florestas"]),
+    ("bancos", ["bancos", "crédito bancário", "spread", "inadimplência"]),
+    ("intermediacao financeira", ["mercado financeiro", "crédito", "gestoras", "corretoras"]),
+    ("seguradoras", ["seguros", "sinistralidade", "resseguros"]),
+    ("credito imobiliario", ["crédito imobiliário", "financiamento imobiliário", "imóveis"]),
+    ("securitizacao", ["securitização", "crédito", "fidc"]),
+    ("arrendamento mercantil", ["leasing", "aluguel de carros", "locação"]),
+    ("energia eletrica", ["setor elétrico", "energia elétrica", "bandeira tarifária", "leilões de energia"]),
+    ("saneamento", ["saneamento", "água", "esgoto", "concessões de saneamento"]),
+    ("construcao", ["construção civil", "imóveis", "incorporadoras", "mercado imobiliário"]),
+    ("comercio", ["varejo", "comércio", "e-commerce", "shopping centers"]),
+    ("textil", ["têxtil", "vestuário", "calçados"]),
+    ("transporte", ["logística", "transportes", "rodovias", "ferrovias", "concessões"]),
+    ("alimentos", ["alimentos", "proteína animal", "frigoríficos", "agroindústria"]),
+    ("bebidas", ["bebidas", "cerveja", "consumo de bebidas"]),
+    ("farmaceutic", ["farmacêutico", "medicamentos", "indústria farmacêutica"]),
+    ("servicos medicos", ["saúde", "hospitalar", "planos de saúde", "medicina diagnóstica"]),
+    ("educacao", ["educação", "ensino superior", "edtech"]),
+    ("telecom", ["telecom", "telecomunicações", "5g", "banda larga"]),
+    ("maquinas", ["máquinas", "equipamentos", "bens de capital", "indústria"]),
+    ("embalagens", ["embalagens", "papelão", "plástico"]),
+    ("hospedagem", ["turismo", "hotéis", "viagens"]),
+    ("brinquedos", ["brinquedos", "varejo infantil"]),
+]
+
+# Fallback por grupo (quando o setor específico não casa com nenhuma chave acima)
+INDUSTRIA_GRUPO_KEYWORDS = {
+    "financeiro": ["setor financeiro", "bancos", "crédito", "juros", "spread"],
+    "utilities": ["setor elétrico", "saneamento", "concessões", "energia"],
+    "commodities": ["commodities", "mineração", "petróleo", "siderurgia", "celulose"],
+    "ciclicas": ["consumo", "varejo", "construção civil", "indústria", "transporte"],
+    "defensivas": ["alimentos", "saúde", "telecom", "consumo", "educação"],
+    "outros": ["bolsa de valores", "mercado de capitais", "B3"],
+}

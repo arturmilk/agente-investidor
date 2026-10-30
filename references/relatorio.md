@@ -12,7 +12,7 @@ Score {total}/100 = {determinístico}/70 + Qualidade {q}/20 + Risco {r}/10 → {
 📊 Preço R$ X · P/L Xx (setor Yx) · P/VP X · DY X% (mediano 5a X%) · ROE X% · Dív.líq/EBITDA Xx
 💰 Preço justo ~R$ X ({margem}) — faixa R$ A a R$ B (Graham, Bazin, múltiplos)
 ✅ Tese: 1–2 frases — por que pode estar descontada e o que destrava valor.
-⚠️ Riscos: 1–2 frases — o que invalida a tese (inclua as red flags altas).
+⚠ Riscos: 1–2 frases — o que invalida a tese (inclua as red flags altas).
 📰 Catalisador/notícia: 1 linha (fato relevante ou manchete recente).
 ```
 

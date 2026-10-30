@@ -173,6 +173,28 @@ class Score(unittest.TestCase):
         self.assertEqual(report.pct(-0.00001), "0,0%")
 
 
+class Seguranca(unittest.TestCase):
+    def test_limpar_texto_de_terceiros(self):
+        import seguranca
+        zw, bidi, tag, esc = chr(0x200B), chr(0x202E), chr(0xE0041), chr(0x1B)
+        comentario = "<" + "!-- nota oculta --" + ">"  # montado por partes: é só um comentário HTML de teste
+        sujo = (f"Lucro{zw} recorde{bidi} <b>forte</b> {comentario} ![x](https://example.com/a.png?d=1) "
+                f"[veja](https://example.com) em www.example.com{tag} {esc}[31m")
+        limpo = seguranca.limpar(sujo)
+        for proibido in (zw, bidi, tag, esc, "<", "!", "https://", "www."):
+            self.assertNotIn(proibido, limpo)
+        self.assertIn("Lucro recorde forte", limpo)
+        self.assertEqual(seguranca.limpar("fim." + chr(10) + chr(10) + "Novo"), "fim. Novo")
+        self.assertEqual(len(seguranca.limpar("a" * 500, 50)), 50)
+
+    def test_links_e_tickers(self):
+        import seguranca
+        self.assertEqual(seguranca.link_seguro("javascript:alert(1)"), "")
+        self.assertTrue(seguranca.link_seguro("https://news.google.com/rss/articles/x"))
+        self.assertTrue(seguranca.ticker_valido("TAEE11") and seguranca.ticker_valido("PETR4"))
+        self.assertFalse(seguranca.ticker_valido("PETR4; rm"))
+
+
 def online():
     import analyze
     import macro
